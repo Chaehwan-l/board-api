@@ -31,6 +31,12 @@ public class UserAccount {
     @Column(nullable = false, length = 20)
     private String role;
 
+    @Column(length = 20)
+    private String provider;
+
+    @Column(name = "provider_id", length = 100)
+    private String providerId;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -38,4 +44,9 @@ public class UserAccount {
     private void onCreate() {
         this.createdAt = LocalDateTime.now();
     }
+
+
+
+
+
 }

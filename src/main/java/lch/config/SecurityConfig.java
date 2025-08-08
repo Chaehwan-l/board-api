@@ -8,14 +8,20 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
+import lch.service.CustomOAuth2UserService;
 import lch.service.CustomUserDetailsService;
 
 @Configuration
 public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
-    public SecurityConfig(CustomUserDetailsService uds) {
+    private final CustomOAuth2UserService oauth2UserService;
+
+    // CustomOAuth2UserService 까지 함께 주입받도록 생성자 변경
+    public SecurityConfig(CustomUserDetailsService uds,
+                          CustomOAuth2UserService oauth2UserService) {
         this.userDetailsService = uds;
+        this.oauth2UserService   = oauth2UserService;
     }
 
     @Bean
@@ -23,41 +29,32 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    /*
-     AuthenticationManager를 수동으로 구성합니다.
-     UserDetailsService + PasswordEncoder 바인딩
-     DaoAuthenticationProvider#setUserDetailsService 대신 사용
-     */
     @Bean
     public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
         AuthenticationManagerBuilder authBuilder =
             http.getSharedObject(AuthenticationManagerBuilder.class);
+
         authBuilder
             .userDetailsService(userDetailsService)
             .passwordEncoder(passwordEncoder());
+
         return authBuilder.build();
     }
 
-    /*
-     SecurityFilterChain 정의
-     /login, /register, 정적 리소스, /posts/**는 인증 없이 접근 허용, 그 외는 모두 인증 필요
-     formLogin, logout 설정
-     */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-          // 우리가 만든 AuthenticationManager를 사용하도록 연결
           .authenticationManager(authenticationManager(http))
 
           .authorizeHttpRequests(auth -> auth
             .requestMatchers(
-              "/login",
-              "/",
-              "/register",
-              "/css/**",
-              "/js/**",
-              "/posts/**"
+              "/", "/login", "/register/**",
+              "/css/**", "/js/**", "/posts/**",
+              "/oauth2/**", "/login/oauth2/**"
             ).permitAll()
+
+            .requestMatchers("/oauth2/**").permitAll()
+
             .anyRequest().authenticated()
           )
 
@@ -65,6 +62,15 @@ public class SecurityConfig {
             .loginPage("/login")
             .defaultSuccessUrl("/posts", true)
             .permitAll()
+          )
+
+          // 인증 후, 사용자 정보 가져오고 완료 폼으로 보냄
+          .oauth2Login(oauth -> oauth
+            .loginPage("/login")
+            .userInfoEndpoint(userInfo ->
+              userInfo.userService(oauth2UserService)
+            )
+            .defaultSuccessUrl("/register/complete", true)
           )
 
           .logout(logout -> logout

@@ -1,17 +1,26 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-  <meta charset="UTF-8">
-  <title>로그인</title>
+<meta charset="UTF-8">
+<title>로그인</title>
 </head>
 <body>
-  <h2>로그인</h2>
-  <form th:action="@{/login}" method="post">
-    <label>아이디: <input type="text" name="username" /></label><br/>
-    <label>비밀번호: <input type="password" name="password" /></label><br/>
-    <button type="submit">로그인</button>
-  </form>
-  <div th:if="${param.error}">로그인 실패: 아이디/비밀번호 확인</div>
-  <div th:if="${param.logout}">로그아웃 되었습니다.</div>
+	<h2>로그인</h2>
+	<form th:action="@{/login}" method="post">
+		<label>아이디: <input type="text" name="username" /></label><br /> <label>비밀번호:
+			<input type="password" name="password" />
+		</label><br />
+		<button type="submit">로그인</button>
+		<div>
+			<a th:href="@{/oauth2/authorization/google}"> 
+			<img src="/images/google.png" alt="Google 로그인" width="32" /></a> 
+			<a th:href="@{/oauth2/authorization/github}"> 
+			<img src="/images/github.png" alt="GitHub 로그인" width="32" /></a> 
+			<a th:href="@{/oauth2/authorization/naver}"> 
+			<img src="/images/naver.png" alt="Naver 로그인" width="32" /></a>
+		</div>
+	</form>
+	<div th:if="${param.error}">로그인 실패: 아이디/비밀번호 확인</div>
+	<div th:if="${param.logout}">로그아웃 되었습니다.</div>
 </body>
 </html>
