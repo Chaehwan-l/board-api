@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 import lch.entity.Post;
 import lch.service.PostService;
 
+// JSON 반환 용 RestController
+
 @RestController
 @RequestMapping("/api/posts")
 public class PostController {
