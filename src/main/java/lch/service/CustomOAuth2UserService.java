@@ -1,5 +1,6 @@
 package lch.service;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -12,62 +13,47 @@ import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
-import lch.entity.UserAccount;
-import lch.repository.UserAccountRepository;
 
 @Service
 public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
 
-    private final UserAccountRepository userRepo;
+	@Override
+	public OAuth2User loadUser(OAuth2UserRequest req) throws OAuth2AuthenticationException {
+		String provider = req.getClientRegistration().getRegistrationId().toUpperCase();
+		OAuth2User delegate = new DefaultOAuth2UserService().loadUser(req);
+		Map<String, Object> a = delegate.getAttributes();
 
-    public CustomOAuth2UserService(UserAccountRepository userRepo) {
-        this.userRepo = userRepo;
-    }
+		String providerId, email = null, name = null;
 
-    @Override
-    public OAuth2User loadUser(OAuth2UserRequest req) throws OAuth2AuthenticationException {
-        String provider = req.getClientRegistration().getRegistrationId().toUpperCase();
-        OAuth2User oidcUser = new DefaultOAuth2UserService().loadUser(req);
-        Map<String,Object> attrs = oidcUser.getAttributes();
+		if ("NAVER".equals(provider)) {
+			Map<String, Object> r = (Map<String, Object>) a.get("response");
+			providerId = r.get("id").toString();
+			email = (String) r.get("email");
+			name = (String) r.get("name");
+		} else if ("GOOGLE".equals(provider)) {
+			providerId = a.get("sub").toString(); // Google은 sub
+			email = (String) a.get("email");
+			name = (String) a.get("name");
+		} else if ("GITHUB".equals(provider)) {
+			providerId = a.get("id").toString();
+			Object e = a.get("email"); // null 가능
+			email = (e != null) ? e.toString() : null;
+			Object n = a.get("name");
+			name = (n != null) ? n.toString() : a.get("login").toString();
+		} else {
+			throw new OAuth2AuthenticationException("Unsupported provider: " + provider);
+		}
 
-        // provider별로 id, email, name 꺼내기
-        String providerId;
-        String email;
-        String name;
-        if (provider.equals("NAVER")) {
-            Map<String,Object> response = (Map<String,Object>)attrs.get("response");
-            providerId = response.get("id").toString();
-            email      = response.get("email").toString();
-            name       = response.get("name").toString();
-        } else {
-            providerId = attrs.get("id").toString();
-            email      = attrs.get("email").toString();
-            name       = attrs.getOrDefault("name", attrs.get("login")).toString();
-        }
+		Map<String, Object> principal = new HashMap<>();
+		principal.put("provider", provider);
+		principal.put("providerId", providerId);
+		principal.put("email", email);
+		principal.put("name", name);
 
-        // user_account에 있으면 조회, 없으면 생성
-        UserAccount user = userRepo.findByProviderAndProviderId(provider, providerId)
-            .orElseGet(() -> {
-                UserAccount u = UserAccount.builder()
-                    .username(provider + "_" + providerId)
-                    .password("")  // 소셜 로그인만 쓰므로 빈 스트링
-                    .role("USER")
-                    .provider(provider)
-                    .providerId(providerId)
-                    .build();
-                return userRepo.save(u);
-            });
-
-        // Spring Security에 사용할 권한·속성 세팅
-        return new DefaultOAuth2User(
-            List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole())),
-            Map.of(
-              "id", user.getId(),
-              "username", user.getUsername(),
-              "email", email,
-              "name", name
-            ),
-            "username"
-        );
-    }
+		return new DefaultOAuth2User(
+				List.of(new SimpleGrantedAuthority("ROLE_PRE_REGISTERED")),
+				principal,
+				"providerId"
+		);
+	}
 }

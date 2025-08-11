@@ -2,12 +2,12 @@ package lch.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
+import lch.security.OAuth2SuccessHandler;
 import lch.service.CustomOAuth2UserService;
 import lch.service.CustomUserDetailsService;
 
@@ -16,12 +16,14 @@ public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
     private final CustomOAuth2UserService oauth2UserService;
+    private final OAuth2SuccessHandler oauth2SuccessHandler;
 
-    // CustomOAuth2UserService 까지 함께 주입받도록 생성자 변경
     public SecurityConfig(CustomUserDetailsService uds,
-                          CustomOAuth2UserService oauth2UserService) {
+                          CustomOAuth2UserService oauth2UserService,
+                          OAuth2SuccessHandler oauth2SuccessHandler) {
         this.userDetailsService = uds;
-        this.oauth2UserService   = oauth2UserService;
+        this.oauth2UserService  = oauth2UserService;
+        this.oauth2SuccessHandler = oauth2SuccessHandler;
     }
 
     @Bean
@@ -29,34 +31,31 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    // 폼 로그인용 DaoAuthenticationProvider만 추가 (OAuth2 Provider는 Spring이 자동 등록)
     @Bean
-    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
-        AuthenticationManagerBuilder authBuilder =
-            http.getSharedObject(AuthenticationManagerBuilder.class);
-
-        authBuilder
-            .userDetailsService(userDetailsService)
-            .passwordEncoder(passwordEncoder());
-
-        return authBuilder.build();
+    public DaoAuthenticationProvider daoAuthenticationProvider() {
+        DaoAuthenticationProvider p = new DaoAuthenticationProvider();
+        p.setUserDetailsService(userDetailsService);
+        p.setPasswordEncoder(passwordEncoder());
+        return p;
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-          .authenticationManager(authenticationManager(http))
+          // ★ 이 줄 제거: .authenticationManager(authenticationManager(http))
 
           .authorizeHttpRequests(auth -> auth
             .requestMatchers(
               "/", "/login", "/register/**",
               "/css/**", "/js/**", "/posts/**",
-              "/oauth2/**", "/login/oauth2/**"
+              "/oauth2/**", "/login/oauth2/**",
+              "/images/**"
             ).permitAll()
-
-            .requestMatchers("/oauth2/**").permitAll()
-
             .anyRequest().authenticated()
           )
+
+          .authenticationProvider(daoAuthenticationProvider()) // 폼 로그인 처리용 Provider 추가
 
           .formLogin(form -> form
             .loginPage("/login")
@@ -64,13 +63,12 @@ public class SecurityConfig {
             .permitAll()
           )
 
-          // 인증 후, 사용자 정보 가져오고 완료 폼으로 보냄
           .oauth2Login(oauth -> oauth
             .loginPage("/login")
-            .userInfoEndpoint(userInfo ->
-              userInfo.userService(oauth2UserService)
-            )
-            .defaultSuccessUrl("/register/complete", true)
+            .userInfoEndpoint(u -> u.userService(oauth2UserService))
+            .successHandler(oauth2SuccessHandler)
+            // 필요 시 임시: 실패 원인 로그 확인
+            // .failureHandler((req, res, ex) -> { ex.printStackTrace(); res.sendRedirect("/login?error"); })
           )
 
           .logout(logout -> logout
