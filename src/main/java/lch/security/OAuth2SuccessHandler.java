@@ -1,10 +1,10 @@
 package lch.security;
 
 import java.io.IOException;
-import java.util.Map;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
@@ -22,71 +22,44 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     private final UserAccountRepository userRepo;
 
     @Override
-    public void onAuthenticationSuccess(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            Authentication authentication
-    ) throws IOException, ServletException {
+    public void onAuthenticationSuccess(HttpServletRequest request,
+                                        HttpServletResponse response,
+                                        Authentication authentication)
+            throws IOException, ServletException {
 
         OAuth2AuthenticationToken token = (OAuth2AuthenticationToken) authentication;
+        String provider   = token.getAuthorizedClientRegistrationId(); // ex) google, github, naver
+        OAuth2User principal = token.getPrincipal();
 
-        // ex) "google" | "github" | "naver"
-        String provider = token.getAuthorizedClientRegistrationId().toUpperCase();
-
-        // CustomOAuth2UserService 가 내려준 attributes
-        Map<String, Object> attrs = token.getPrincipal().getAttributes();
-
-        // 1순위: CustomOAuth2UserService 가 넣어둔 providerId 사용
-        String providerId = attrs.get("providerId") != null ? attrs.get("providerId").toString() : null;
-
-        // 2순위: (안 들어온 경우) 공급자별 원본 키에서 보정
-        if (providerId == null) {
-            Object raw = null;
-            if ("GOOGLE".equals(provider)) {
-                raw = attrs.get("sub");
-            } else if ("GITHUB".equals(provider)) {
-                raw = attrs.get("id");
-            } else if ("NAVER".equals(provider)) {
-                Object resp = attrs.get("response");
-                if (resp instanceof Map<?, ?> respMap) {
-                    raw = respMap.get("id");
-                }
-            }
-            if (raw != null) {
-				providerId = raw.toString();
-			}
+        // CustomOAuth2UserService에서 심은 키 우선 사용
+        String providerId = valueOf(principal, "providerId");
+        if (providerId == null || providerId.isBlank()) {
+            providerId = token.getName(); // fallback
         }
+        String email = valueOf(principal, "email");
 
-        if (providerId == null) {
-            response.sendRedirect("/login?error");
+        // 기존 사용자 매핑 확인
+        UserAccount user = userRepo.findByProviderAndProviderId(provider, providerId).orElse(null);
+
+        // 추가 입력 필요 여부 판단
+        boolean completed = (user != null) && Boolean.TRUE.equals(user.getSignupCompleted());
+        if (completed) {
+            response.sendRedirect("/");
             return;
         }
 
-        // ★ 메서드 "내부"에서 final 복사본을 만든 뒤 람다에 전달
-        final String fProvider   = provider;
-        final String fProviderId = providerId;
+        // 완료 폼에서 사용할 값 세션에 보관
+        request.getSession().setAttribute("provider", provider);
+        request.getSession().setAttribute("providerId", providerId);
+        if (email != null) {
+			request.getSession().setAttribute("email", email);
+		}
 
-        UserAccount user = userRepo.findByProviderAndProviderId(fProvider, fProviderId)
-                .orElseGet(() -> {
-                    UserAccount u = new UserAccount();
-                    u.setUsername(fProvider + "_" + fProviderId);
-                    u.setPassword(""); // 비밀번호 미설정 상태
-                    u.setRole("USER");
-                    u.setProvider(fProvider);
-                    u.setProviderId(fProviderId);
-                    return userRepo.save(u);
-                });
+        response.sendRedirect("/register/complete");
+    }
 
-        boolean passwordSet = user.getPassword() != null && !user.getPassword().isBlank();
-
-        // 완료 폼에서 hidden으로 쓸 값 세션에 보관
-        request.getSession().setAttribute("provider", fProvider);
-        request.getSession().setAttribute("providerId", fProviderId);
-
-        if (passwordSet) {
-            response.sendRedirect("/");
-        } else {
-            response.sendRedirect("/register/complete");
-        }
+    private static String valueOf(OAuth2User user, String key) {
+        Object v = user.getAttributes().get(key);
+        return v == null ? null : String.valueOf(v);
     }
 }

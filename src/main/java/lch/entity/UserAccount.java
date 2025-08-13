@@ -17,36 +17,51 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "user_account")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter @Setter
+@NoArgsConstructor @AllArgsConstructor
+@Builder
 public class UserAccount {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 50)
+    @Column(nullable = false, length = 50)
     private String username;
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = 255)
+    private String email;
+
+    @Column(length = 100)
     private String password;
 
-    @Column(nullable = false, length = 20)
-    private String role;
-
+    // 소셜 로그인 매핑
     @Column(length = 20)
     private String provider;
 
     @Column(name = "provider_id", length = 100)
     private String providerId;
 
+    // 회원가입 완료 여부
+    @Column(name = "signup_completed", nullable = false)
+    private Boolean signupCompleted;
+
+    @Column(name = "role", nullable = false, length = 20)
+    private String role = "USER";
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
     private void onCreate() {
-        this.createdAt = LocalDateTime.now();
+        if (this.createdAt == null) {
+			this.createdAt = LocalDateTime.now();
+		}
+        if (this.role == null) {
+			this.role = "USER";
+		}
+        if (this.signupCompleted == null) {
+			this.signupCompleted = Boolean.FALSE;
+		}
     }
-
-
-
-
-
 }
