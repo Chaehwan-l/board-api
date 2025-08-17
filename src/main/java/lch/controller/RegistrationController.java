@@ -29,15 +29,24 @@ public class RegistrationController {
                                @RequestParam("password") String password,
                                @RequestParam("passwordConfirm") String passwordConfirm,
                                Model model) {
+
         if (!password.equals(passwordConfirm)) {
             model.addAttribute("error", "비밀번호 확인이 일치하지 않습니다.");
+            // 입력값 유지
+            model.addAttribute("username", username);
+            model.addAttribute("email", email);
             return "register";
         }
+
         try {
             userService.register(username, email, password);
-            return "redirect:/posts";
+            // 회원가입 → 로그인 → 게시판 흐름을 위해 로그인 페이지로
+            return "redirect:/login?registered";
         } catch (IllegalArgumentException e) {
             model.addAttribute("error", e.getMessage());
+            // 입력값 유지
+            model.addAttribute("username", username);
+            model.addAttribute("email", email);
             return "register";
         }
     }
@@ -48,8 +57,8 @@ public class RegistrationController {
         String providerId = (String) req.getSession().getAttribute("providerId");
         String email      = (String) req.getSession().getAttribute("email");
         if (provider == null || providerId == null) {
-			return "redirect:/login";
-		}
+            return "redirect:/login";
+        }
         model.addAttribute("provider", provider);
         model.addAttribute("providerId", providerId);
         model.addAttribute("email", email);
@@ -65,18 +74,25 @@ public class RegistrationController {
                            @RequestParam("providerId") String providerId,
                            Model model,
                            HttpServletRequest req) {
+
         if (!password.equals(passwordConfirm)) {
             model.addAttribute("error", "비밀번호 확인이 일치하지 않습니다.");
+            // 입력값 유지
+            model.addAttribute("username", username);
             model.addAttribute("provider", provider);
             model.addAttribute("providerId", providerId);
             model.addAttribute("email", email);
             return "register_complete";
         }
+
         try {
             userService.registerWithProvider(username, email, password, provider, providerId);
+            // OAuth는 이미 인증 컨텍스트가 있는 경우가 많으므로 게시판으로
             return "redirect:/posts";
         } catch (IllegalArgumentException e) {
             model.addAttribute("error", e.getMessage());
+            // 입력값 유지
+            model.addAttribute("username", username);
             model.addAttribute("provider", provider);
             model.addAttribute("providerId", providerId);
             model.addAttribute("email", email);

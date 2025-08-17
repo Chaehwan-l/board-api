@@ -10,6 +10,7 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
 
 	Optional<UserAccount> findByUsername(String username);
 	Optional<UserAccount> findByEmail(String email);
+	Optional<UserAccount> findByProviderId(String providerId);
 
 	// Oauth
 	Optional<UserAccount> findByProviderAndProviderId(String provider, String providerId);
