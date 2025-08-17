@@ -44,7 +44,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         // 추가 입력 필요 여부 판단
         boolean completed = (user != null) && Boolean.TRUE.equals(user.getSignupCompleted());
         if (completed) {
-            response.sendRedirect("/");
+            response.sendRedirect("/posts");
             return;
         }
 
