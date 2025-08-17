@@ -5,11 +5,14 @@
 <title>회원가입</title>
 </head>
 <body>
+  <script th:if="${param.required}" th:inline="javascript">
+    alert('로그인이 필요합니다. 회원가입 후 이용해 주세요.');
+  </script>
 	<h2>소셜미디어 회원가입</h2>
 	<p>
-		<a th:href="@{/oauth2/authorization/google}">Google 계정으로 가입</a> | <a
-			th:href="@{/oauth2/authorization/github}">GitHub 계정으로 가입</a> | <a
-			th:href="@{/oauth2/authorization/naver}">Naver 계정으로 가입</a>
+	<a th:href="@{/oauth2/authorization/google}">Google 계정으로 가입</a> | 
+	<a th:href="@{/oauth2/authorization/github}">GitHub 계정으로 가입</a> | 
+	<a th:href="@{/oauth2/authorization/naver}">Naver 계정으로 가입</a>
 	</p>
 	<hr />
 	<h2>일반 회원가입</h2>
@@ -46,5 +49,6 @@
 	<p>
 		<a th:href="@{/login}">이미 계정이 있나요? 로그인</a>
 	</p>
+	
 </body>
 </html>
