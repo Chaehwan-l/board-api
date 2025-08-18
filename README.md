@@ -10,13 +10,13 @@ HTTP 메서드 이해, JPA 연동, DB 마이그레이션, Swagger, 간단 뷰(Th
 * 게시글 CRUD(Create, Read, Update, Delete)
 * 페이징, 검색 기능 확장 가능
 * Flyway를 이용한 DB 스키마 버전 관리
-* Swagger UI를 통한 API 문서화 및 테스트
-* 간단한 Thymeleaf 뷰(옵션)
+* 초기 Swagger UI를 통한 API 문서화 및 테스트
+* 휴에 간단한 Thymeleaf 뷰 구현
 
 ## 기술 스택
 
 * Java 21
-* Spring Boot 3.5
+* Spring Boot
 * Spring Data JPA (Hibernate)
 * Flyway
 * MySQL
@@ -37,27 +37,33 @@ HTTP 메서드 이해, JPA 연동, DB 마이그레이션, Swagger, 간단 뷰(Th
 + `.env` 파일 생성 (프로젝트 루트)
 
    ```dotenv
-   DB_URL=jdbc:mysql://localhost:3306/board_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+   DB_URL=jdbc:mysql://localhost:3306/board_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&createDatabaseIfNotExist=true
    DB_USER=<username>
-   DB_PASS=<password>
+   DB_PASS=<password
+
+   ADMIN_USER=<admin>
+   ADMIN_EMAIL=<admin@admin.com>
+   ADMIN_PW_HASH=<admin_pw>
+   ADMIN_ROLE=ADMIN
+
+   GITHUB_CLIENT_ID=<id>
+   GITHUB_CLIENT_SECRET=<secret>
+
+   GOOGLE_CLIENT_ID=<id>
+   GOOGLE_CLIENT_SECRET=<secret>
+
+   NAVER_CLIENT_ID=<id>
+   NAVER_CLIENT_SECRET=<secret>
    ```
 
 ## 실행 방법
 
 * Swagger UI: [http://localhost:8088/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
+* 추후 뷰 구현으로 사용 X
 
 ## DB 마이그레이션
 
-* `src/main/resources/db/migration/V1__create_post_table.sql` 파일을 통해 `post` 테이블 생성
-* Flyway는 애플리케이션 시작 시 자동 실행
-
-## API 예시
-
-* 전체 조회: `GET /api/posts`
-* 단건 조회: `GET /api/posts/{id}`
-* 생성: `POST /api/posts`
-* 수정: `PUT /api/posts/{id}`
-* 삭제: `DELETE /api/posts/{id}`
+* Flyway로 애플리케이션 시작 시 자동 실행
 
 ## 향후 계획
 
