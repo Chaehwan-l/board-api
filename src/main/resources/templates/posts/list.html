@@ -24,11 +24,24 @@
   <!-- 비로그인 상태 -->
   <a th:if="${loginName == null}" href="#"
   onclick="alert('로그인이 필요합니다'); location.href='/register?required'; return false;">새 글쓰기</a>
-  <ul>
-    <li th:each="post : ${posts}">
-      <a th:href="@{|/posts/${post.id}|}"
-         th:text="${post.title}">제목</a>
-    </li>
-  </ul>
+  <p>
+  <table>
+  <thead>
+    <tr>
+      <th>번호</th>
+      <th>제목</th>
+      <th>작성자</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr th:each="post : ${posts}">
+      <td th:text="${post.id}">1</td>
+      <td>
+        <a th:href="@{|/posts/${post.id}|}" th:text="${post.title}">제목</a>
+      </td>
+      <td th:text="${post.user != null ? post.user.username : '알수없음'}">작성자</td>
+    </tr>
+  </tbody>
+  </table>
 </body>
 </html>

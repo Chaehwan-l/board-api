@@ -47,55 +47,44 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-          .authorizeHttpRequests(auth -> auth
-            // 공개
-            .requestMatchers("/", "/login", "/register/**",
-                             "/oauth2/**", "/login/oauth2/**",
-                             "/css/**", "/js/**", "/images/**").permitAll()
+      http
+        .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
+        .authorizeHttpRequests(auth -> auth
+          // 공개
+          .requestMatchers("/", "/login", "/register/**",
+                           "/oauth2/**", "/login/oauth2/**",
+                           "/css/**", "/js/**", "/images/**").permitAll()
 
-            // 쓰기/수정 화면은 로그인 필요 (순서 중요: 먼저 매칭)
-            .requestMatchers(HttpMethod.GET, "/posts/new", "/posts/*/edit").authenticated()
+          // 화면: 글쓰기/수정 페이지는 로그인 필요
+          .requestMatchers(HttpMethod.GET, "/posts/new", "/posts/*/edit").authenticated()
 
-            // 보기(목록/상세)는 전체 공개
-            .requestMatchers(HttpMethod.GET, "/posts", "/posts/*").permitAll()
+          // 화면: 목록/상세는 공개
+          .requestMatchers(HttpMethod.GET, "/posts", "/posts/*").permitAll()
 
-            // 데이터 변경은 로그인 필요
-            .requestMatchers(HttpMethod.POST,   "/posts/**").authenticated()
-            .requestMatchers(HttpMethod.PUT,    "/posts/**").authenticated()
-            .requestMatchers(HttpMethod.PATCH,  "/posts/**").authenticated()
-            .requestMatchers(HttpMethod.DELETE, "/posts/**").authenticated()
+          // API: 새 커맨드 엔드포인트만 쓰기 허용
+          .requestMatchers("/api/secure/**").authenticated()
 
-            .anyRequest().authenticated()
-          )
+          // 구(PostController)의 쓰기 API가 남아있다면 차단
+          .requestMatchers(HttpMethod.POST,   "/api/posts/**").denyAll()
+          .requestMatchers(HttpMethod.PUT,    "/api/posts/**").denyAll()
+          .requestMatchers(HttpMethod.DELETE, "/api/posts/**").denyAll()
 
-          .authenticationProvider(daoAuthenticationProvider())
+          // 화면에서의 변경 요청은 로그인 필요
+          .requestMatchers(HttpMethod.POST,   "/posts/**").authenticated()
+          .requestMatchers(HttpMethod.PUT,    "/posts/**").authenticated()
+          .requestMatchers(HttpMethod.PATCH,  "/posts/**").authenticated()
+          .requestMatchers(HttpMethod.DELETE, "/posts/**").authenticated()
 
-          .formLogin(form -> form
-            .loginPage("/login")
-            .defaultSuccessUrl("/posts", true)
-            .failureUrl("/login?error")
-            .permitAll()
-          )
-
-          .oauth2Login(oauth -> oauth
-            .loginPage("/login")
-            .userInfoEndpoint(u -> u.userService(oauth2UserService))
-            .successHandler(oauth2SuccessHandler)
-          )
-
-          .logout(logout -> logout
-        		    .logoutUrl("/logout")
-        		    .logoutSuccessUrl("/")
-        		    .invalidateHttpSession(true)
-        		    .deleteCookies("JSESSIONID")
-        		)
-
-          // 미인증 접근 시 회원가입으로 유도
-          .exceptionHandling(e -> e
-            .authenticationEntryPoint((req, res, ex) -> res.sendRedirect("/register?required"))
-          );
-
-        return http.build();
+          // 나머지
+          .anyRequest().permitAll()
+        )
+        .authenticationProvider(daoAuthenticationProvider())
+        .formLogin(f -> f.loginPage("/login").defaultSuccessUrl("/posts", true).failureUrl("/login?error").permitAll())
+        .oauth2Login(o -> o.loginPage("/login").userInfoEndpoint(u -> u.userService(oauth2UserService))
+                           .successHandler(oauth2SuccessHandler))
+        .logout(l -> l.logoutUrl("/logout").logoutSuccessUrl("/").invalidateHttpSession(true).deleteCookies("JSESSIONID"))
+        .exceptionHandling(e -> e.authenticationEntryPoint((req, res, ex) -> res.sendRedirect("/register?required")));
+      return http.build();
     }
+
 }
