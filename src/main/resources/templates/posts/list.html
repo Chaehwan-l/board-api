@@ -2,46 +2,68 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
   <title>게시글 목록</title>
+  <style>
+    .container{max-width:960px;margin:32px auto;padding:0 16px;font-family:system-ui,Arial}
+    .toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:12px 0 8px}
+    .btn, .btn:link, .btn:visited, button.btn{
+      display:inline-block;padding:8px 14px;border:1px solid #d1d5db;border-radius:6px;
+      text-decoration:none;color:#111827;font-weight:600;background:#fff;cursor:pointer
+    }
+    .btn:hover{background:#f3f4f6}
+    .btn-primary{border-color:#2563eb}
+    .btn-primary:hover{background:#eff6ff}
+    .table-wrap{overflow-x:auto;background:#fff;border:1px solid #e5e7eb;border-radius:8px}
+    table.list{width:100%;border-collapse:collapse;table-layout:fixed}
+    table.list thead th{background:#f9fafb;color:#6b7280;font-size:14px}
+    table.list th, table.list td{padding:12px 14px;border-bottom:1px solid #eef2f7;text-align:left}
+    table.list tbody tr:hover{background:#f3f4f6}
+    col.col-id{width:80px}
+    col.col-author{width:200px}
+    .title{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    button{font: inherit; appearance:none; -webkit-appearance:none}
+  </style>
 </head>
 <body>
   <script th:if="${param.autologin}" th:inline="javascript">
     alert('기존 정보가 있어 자동 로그인했습니다.');
   </script>
   <div th:if="${loginName}">
-  <p>
-    <strong th:text="${loginName}"></strong>
-    <span th:if="${loginEmail}">(<span th:text="${loginEmail}"></span>)</span>
-    <span th:if="${loginRole}"> / 권한: <span th:text="${loginRole}"></span></span>
-  </p>
-  <form th:action="@{/logout}" method="post" style="display:inline;">
-    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-    <button type="submit">로그아웃</button>
-  </form>
+    <p>
+      <strong th:text="${loginName}"></strong>
+      <span th:if="${loginEmail}">(<span th:text="${loginEmail}"></span>)</span>
+      <span th:if="${loginRole}"> / 권한: <span th:text="${loginRole}"></span></span>
+    </p>
+    <form th:action="@{/logout}" method="post" style="display:inline;">
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+      <button type="submit" class="btn">로그아웃</button>
+    </form>
   </div>
-  <h1>게시글 목록</h1>
-  <!-- 로그인 상태 -->
-  <a th:if="${loginName}" th:href="@{/posts/new}">새 글쓰기</a>
-  <!-- 비로그인 상태 -->
-  <a th:if="${loginName == null}" href="#"
-  onclick="alert('로그인이 필요합니다'); location.href='/register?required'; return false;">새 글쓰기</a>
-  <p>
-  <table>
-  <thead>
-    <tr>
-      <th>번호</th>
-      <th>제목</th>
-      <th>작성자</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr th:each="post : ${posts}">
-      <td th:text="${post.id}">1</td>
-      <td>
-        <a th:href="@{|/posts/${post.id}|}" th:text="${post.title}">제목</a>
-      </td>
-      <td th:text="${post.user != null ? post.user.username : '알수없음'}">작성자</td>
-    </tr>
-  </tbody>
-  </table>
+  <div class="container">
+    <div class="toolbar">
+      <h1 style="margin:0;">게시글 목록</h1>
+      <div>
+        <a th:href="@{/}" class="btn">메인으로</a>
+        <a th:href="@{/posts/new}" class="btn btn-primary">새 글쓰기</a>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="list">
+        <colgroup>
+          <col class="col-id"/><col/><col class="col-author"/>
+        </colgroup>
+        <thead>
+          <tr><th>번호</th><th>제목</th><th>작성자</th></tr>
+        </thead>
+        <tbody>
+          <tr th:each="post : ${posts}">
+            <td th:text="${post.id}">1</td>
+            <td><a th:href="@{|/posts/${post.id}|}" th:text="${post.title}" class="title">제목</a></td>
+            <td th:text="${post.user != null ? post.user.username : '알수없음'}">작성자</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 </body>
 </html>

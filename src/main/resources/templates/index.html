@@ -4,37 +4,45 @@
   <meta charset="UTF-8">
   <title>환영합니다</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 400px;
-      margin: 100px auto;
-      text-align: center;
-    }
-    a.button {
-      display: inline-block;
-      margin: 10px;
-      padding: 10px 20px;
-      border: 1px solid #333;
-      border-radius: 4px;
-      text-decoration: none;
-      color: #333;
-      font-weight: bold;
-    }
-    a.button:hover {
-      background: #f0f0f0;
-    }
+  body {
+    font-family: Arial, sans-serif;
+    max-width: 400px;
+    margin: 100px auto;
+    text-align: center;
+  }
+  button, input, select, textarea { font: inherit; }
+  a.button, button.button {
+    display: inline-block;
+    margin: 10px;
+    padding: 10px 20px;
+    border: 1px solid #333;
+    border-radius: 4px;
+    text-decoration: none;
+    color: #333;
+    font-weight: bold;
+    background: transparent;
+    cursor: pointer;
+  }
+  a.button:hover, button.button:hover {
+    background: #f0f0f0;
+    text-decoration: none;
+  }
   </style>
 </head>
 <body>
   <h1>게시판에 오신 것을 환영합니다</h1>
-
   <div>
+    <a th:href="@{/posts}" class="button">게시글 보기</a>
+  </div>
+  <div th:if="${loginName == null}">
     <a th:href="@{/register}" class="button">회원가입</a>
     <a th:href="@{/login}"    class="button">로그인</a>
   </div>
-
-  <div>
-    <a th:href="@{/posts}" class="button">게시글 보기</a>
+  <div th:if="${loginName != null}">
+    <form th:action="@{/logout}" method="post" style="display:inline;">
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+      <button type="submit" class="button">로그아웃</button>
+    </form>
   </div>
 </body>
 </html>

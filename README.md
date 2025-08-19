@@ -39,7 +39,7 @@ HTTP 메서드 이해, JPA 연동, DB 마이그레이션, Swagger, 간단 뷰(Th
    ```dotenv
    DB_URL=jdbc:mysql://localhost:3306/board_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&createDatabaseIfNotExist=true
    DB_USER=<username>
-   DB_PASS=<password
+   DB_PASS=<password>
 
    ADMIN_USER=<admin>
    ADMIN_EMAIL=<admin@admin.com>

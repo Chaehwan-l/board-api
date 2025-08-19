@@ -79,10 +79,21 @@ public class SecurityConfig {
           .anyRequest().permitAll()
         )
         .authenticationProvider(daoAuthenticationProvider())
-        .formLogin(f -> f.loginPage("/login").defaultSuccessUrl("/posts", true).failureUrl("/login?error").permitAll())
-        .oauth2Login(o -> o.loginPage("/login").userInfoEndpoint(u -> u.userService(oauth2UserService))
-                           .successHandler(oauth2SuccessHandler))
-        .logout(l -> l.logoutUrl("/logout").logoutSuccessUrl("/").invalidateHttpSession(true).deleteCookies("JSESSIONID"))
+
+        .formLogin(f -> f.loginPage("/login")
+        		.defaultSuccessUrl("/", true)
+        		.failureUrl("/login?error")
+        		.permitAll())
+
+        .oauth2Login(o -> o.loginPage("/login")
+        		.userInfoEndpoint(u -> u.userService(oauth2UserService))
+        		.successHandler(oauth2SuccessHandler))
+
+        .logout(l -> l.logoutUrl("/logout")
+        		.logoutSuccessUrl("/")
+        		.invalidateHttpSession(true)
+        		.deleteCookies("JSESSIONID"))
+
         .exceptionHandling(e -> e.authenticationEntryPoint((req, res, ex) -> res.sendRedirect("/register?required")));
       return http.build();
     }

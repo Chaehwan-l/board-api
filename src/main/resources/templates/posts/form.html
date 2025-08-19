@@ -1,42 +1,74 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-  <title>글쓰기 / 수정</title>
+  <title th:text="${post.id != null} ? '수정' : '새 글쓰기'">글쓰기</title>
+  <style>
+    .container{max-width:960px;margin:32px auto;padding:0 16px;font-family:system-ui,Arial}
+    .toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:12px 0 8px}
+    button, input[type="submit"]{font:inherit;appearance:none;-webkit-appearance:none}
+    a.btn, button.btn, input[type="submit"].btn,
+    a.btn:link, a.btn:visited{
+      display:inline-block;padding:8px 14px;border:1px solid #d1d5db;border-radius:6px;
+      text-decoration:none;color:#111827;font-weight:600;background:#fff;cursor:pointer;line-height:1.2
+    }
+    a.btn:hover, button.btn:hover, input[type="submit"].btn:hover{background:#f3f4f6}
+    .btn-primary{border-color:#2563eb}
+    .btn-primary:hover{background:#eff6ff}
+
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px}
+    .field{margin-bottom:14px}
+    .label{display:block;font-weight:600;margin-bottom:6px}
+    .input, .textarea{width:100%;box-sizing:border-box;border:1px solid #d1d5db;border-radius:6px;padding:10px 12px;font:inherit}
+    .textarea{min-height:220px;resize:vertical;line-height:1.5}
+    .errors{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:6px;padding:10px 12px;margin-bottom:14px}
+    .field .err{display:block;color:#b91c1c;font-size:14px;margin-top:6px}
+  </style>
 </head>
 <body>
-  <h1 th:text="${post.id != null} ? '수정' : '새 글쓰기'">폼</h1>
-
-  <form th:object="${post}"
-        th:action="${post.id != null} ? @{/posts/{id}(id=${post.id})} : @{/posts}"
-        method="post">
-
-    <!-- CSRF -->
-    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-
-    <!-- 메서드 오버라이드 -->
-    <input type="hidden" name="_method"
-           th:value="${post.id != null} ? 'PUT' : 'POST'"/>
-
-    <div th:if="${#fields.hasErrors('*')}">
-      <ul>
-        <li th:each="err : ${#fields.errors('*')}" th:text="${err}"></li>
-      </ul>
+  <div class="container" th:with="isEdit=${post.id != null}">
+    <div class="toolbar">
+      <h1 style="margin:0;" th:text="${isEdit} ? '수정' : '새 글쓰기'">글쓰기</h1>
+      <div>
+        <a th:href="@{/}" class="btn">메인</a>
+        <a th:href="@{/posts}" class="btn">목록</a>
+        <a th:if="${isEdit}" th:href="@{|/posts/${post.id}|}" class="btn">상세</a>
+      </div>
     </div>
 
-    <div>
-      <label>제목</label>
-      <input type="text" th:field="*{title}"/>
-      <span th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></span>
-    </div>
+    <div class="card">
+      <form th:object="${post}"
+            th:action="${isEdit} ? @{/posts/{id}(id=${post.id})} : @{/posts}"
+            method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
 
-    <div>
-      <label>내용</label>
-      <textarea th:field="*{content}"></textarea>
-      <span th:if="${#fields.hasErrors('content')}" th:errors="*{content}"></span>
-    </div>
+        <!-- 수정일 때만 PUT 오버라이드 -->
+        <input type="hidden" name="_method" th:if="${isEdit}" value="PUT"/>
 
-    <button type="submit">저장</button>
-    <a th:href="@{/posts}">취소</a>
-  </form>
+        <!-- 글로벌 에러 -->
+        <div class="errors" th:if="${#fields.hasErrors('*')}">
+          <ul style="margin:0;padding-left:18px;">
+            <li th:each="err : ${#fields.errors('*')}" th:text="${err}"></li>
+          </ul>
+        </div>
+
+        <div class="field">
+          <label for="title" class="label">제목</label>
+          <input id="title" type="text" th:field="*{title}" class="input" required/>
+          <span class="err" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></span>
+        </div>
+
+        <div class="field">
+          <label for="content" class="label">내용</label>
+          <textarea id="content" th:field="*{content}" class="textarea" required></textarea>
+          <span class="err" th:if="${#fields.hasErrors('content')}" th:errors="*{content}"></span>
+        </div>
+
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+          <a th:href="${isEdit} ? @{|/posts/${post.id}|} : @{/posts}" class="btn">취소</a>
+          <button type="submit" class="btn btn-primary">저장</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </body>
 </html>

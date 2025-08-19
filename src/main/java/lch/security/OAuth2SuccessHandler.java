@@ -37,7 +37,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         }
         String email = valueOf(principal, "email");
 
-        // 1) provider+providerId 우선, 2) 없으면 email로도 조회
+        // provider+providerId 우선, 없으면 email로도 조회
         UserAccount user = userRepo.findByProviderAndProviderId(provider, providerId)
                 .orElseGet(() -> (email != null && !email.isBlank())
                         ? userRepo.findByEmail(email).orElse(null)
@@ -45,12 +45,12 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
         boolean completed = (user != null) && Boolean.TRUE.equals(user.getSignupCompleted());
         if (completed) {
-            // 기존 계정 → 게시판 진입 + 알림 플래그
-            response.sendRedirect("/posts?autologin=true");
+            // 기존 계정 : 게시판 진입 + 알림 플래그
+            response.sendRedirect("/?autologin=true");
             return;
         }
 
-        // 추가 정보 필요 → 세션에 보관 후 완료 페이지로
+        // 추가 정보 필요 : 세션에 보관 후 완료 페이지로
         request.getSession().setAttribute("provider", provider);
         request.getSession().setAttribute("providerId", providerId);
         if (email != null) {
