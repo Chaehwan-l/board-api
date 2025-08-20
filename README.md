@@ -54,6 +54,10 @@ HTTP 메서드 이해, JPA 연동, DB 마이그레이션, Swagger, 간단 뷰(Th
 
    NAVER_CLIENT_ID=<id>
    NAVER_CLIENT_SECRET=<secret>
+
+   AWS_REGION=<aws_region>
+   AWS_PROFILE=<aws_iam>
+   S3_BUCKET=<bucket_name>
    ```
 
 ## 실행 방법
