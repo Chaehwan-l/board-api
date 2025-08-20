@@ -14,11 +14,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import jakarta.validation.Valid;
 import lch.entity.Post;
 import lch.entity.UserAccount;
+import lch.repository.AttachmentRepository;
 import lch.repository.UserAccountRepository;
+import lch.service.AttachmentService; // 추가
 import lch.service.PostService;
 import lombok.RequiredArgsConstructor;
 
@@ -29,6 +32,8 @@ public class PostViewController {
 
     private final PostService postService;
     private final UserAccountRepository userRepo;
+    private final AttachmentService attachmentService;
+    private final AttachmentRepository attachmentRepository;
 
     private boolean ownsOrAdmin(UserAccount me, Post p) {
         if (me == null || p == null) {
@@ -53,12 +58,13 @@ public class PostViewController {
     @GetMapping("/{id}")
     public String detail(@PathVariable("id") Long id,
                          Model model,
-                         org.springframework.security.core.Authentication auth) {
+                         Authentication auth) {
         var post = postService.findById(id);
         var me = resolveCurrentUser(auth);
         boolean canEdit = me != null && ownsOrAdmin(me, post);
         model.addAttribute("post", post);
         model.addAttribute("canEdit", canEdit);
+        model.addAttribute("attachments", attachmentRepository.findByPostIdOrderByIdAsc(id));
         return "posts/detail";
     }
 
@@ -69,11 +75,12 @@ public class PostViewController {
         return "posts/form";
     }
 
-    // 글쓰기 처리 : createBy 사용
+    // 글쓰기 처리 + 드래프트 정리
     @PostMapping
     public String create(@Valid @ModelAttribute("post") Post post,
                          BindingResult br,
-                         Authentication auth) {
+                         Authentication auth,
+                         @RequestParam(value = "draftId", required = false) String draftId) {
         if (br.hasErrors()) {
 			return "posts/form";
 		}
@@ -81,18 +88,24 @@ public class PostViewController {
         if (me == null) {
 			return "redirect:/login";
 		}
-        postService.createBy(me, post.getTitle(), post.getContent());
-        return "redirect:/posts";
+
+        // createBy가 Post를 반환하도록 가정
+        Post saved = postService.createBy(me, post.getTitle(), post.getContent());
+
+        if (draftId != null && !draftId.isBlank()) {
+            attachmentService.finalizeDraftToPost(draftId, saved);
+        }
+        return "redirect:/posts/" + saved.getId();
     }
 
     // 수정 폼
     @GetMapping("/{id}/edit")
     public String editForm(@PathVariable("id") Long id,
                            Model model,
-                           org.springframework.security.core.Authentication auth,
+                           Authentication auth,
                            org.springframework.web.servlet.mvc.support.RedirectAttributes ra) {
-        lch.entity.Post post = postService.findById(id);
-        lch.entity.UserAccount me = resolveCurrentUser(auth); // 기존 helper 사용
+        Post post = postService.findById(id);
+        UserAccount me = resolveCurrentUser(auth);
         if (me == null || !ownsOrAdmin(me, post)) {
             ra.addFlashAttribute("error", "수정 권한이 없습니다.");
             return "redirect:/posts/{id}";
@@ -101,19 +114,24 @@ public class PostViewController {
         return "posts/form";
     }
 
-    // 수정 처리 : updateBy 사용
+    // 수정 처리 + 드래프트 정리
     @PutMapping("/{id}")
     public String update(@PathVariable("id") Long id,
-                         @Valid @ModelAttribute("post") lch.entity.Post post,
-                         org.springframework.validation.BindingResult br,
-                         org.springframework.security.core.Authentication auth,
+                         @Valid @ModelAttribute("post") Post post,
+                         BindingResult br,
+                         Authentication auth,
+                         @RequestParam(value = "draftId", required = false) String draftId,
                          org.springframework.web.servlet.mvc.support.RedirectAttributes ra) {
         if (br.hasErrors()) {
 			return "posts/form";
 		}
-        lch.entity.UserAccount me = resolveCurrentUser(auth);
+        UserAccount me = resolveCurrentUser(auth);
         try {
             postService.updateBy(me, id, post.getTitle(), post.getContent());
+            if (draftId != null && !draftId.isBlank()) {
+                Post updated = postService.findById(id);
+                attachmentService.finalizeDraftToPost(draftId, updated);
+            }
             return "redirect:/posts/{id}";
         } catch (org.springframework.security.access.AccessDeniedException e) {
             ra.addFlashAttribute("error", "수정 권한이 없습니다.");
@@ -121,7 +139,7 @@ public class PostViewController {
         }
     }
 
-    // 삭제 처리 : deleteBy 사용
+    // 삭제
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable("id") Long id, Authentication auth) {
         UserAccount me = resolveCurrentUser(auth);
@@ -137,7 +155,6 @@ public class PostViewController {
         if (auth == null) {
 			return null;
 		}
-
         Object principal = auth.getPrincipal();
         if (principal instanceof UserDetails ud) {
             return userRepo.findByUsername(ud.getUsername()).orElse(null);

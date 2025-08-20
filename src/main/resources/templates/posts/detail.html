@@ -52,6 +52,16 @@
       <!-- XSS 방지: th:text + pre-wrap 유지 -->
       <div class="content" th:text="*{content}">내용</div>
     </div>
+    <div th:if="${attachments != null and !#lists.isEmpty(attachments)}">
+	  <h3>첨부파일</h3>
+	  <ul>
+	    <li th:each="a : ${attachments}">
+	      <a th:href="@{|/attachments/${a.id}/download|}"
+	         th:text="${a.originalName}">filename</a>
+	      <small th:text="${#numbers.formatInteger(a.size/1024,0)} + ' KB'"></small>
+	    </li>
+	  </ul>
+	</div>
   </div>
 </body>
 </html>

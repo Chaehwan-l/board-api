@@ -2,6 +2,9 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
   <title th:text="${post.id != null} ? '수정' : '새 글쓰기'">글쓰기</title>
+  <meta name="_csrf" th:content="${_csrf.token}">
+  <meta name="_csrf_header" th:content="${_csrf.headerName}">
+
   <style>
     .container{max-width:960px;margin:32px auto;padding:0 16px;font-family:system-ui,Arial}
     .toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:12px 0 8px}
@@ -14,7 +17,6 @@
     a.btn:hover, button.btn:hover, input[type="submit"].btn:hover{background:#f3f4f6}
     .btn-primary{border-color:#2563eb}
     .btn-primary:hover{background:#eff6ff}
-
     .card{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:18px}
     .field{margin-bottom:14px}
     .label{display:block;font-weight:600;margin-bottom:6px}
@@ -22,6 +24,11 @@
     .textarea{min-height:220px;resize:vertical;line-height:1.5}
     .errors{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:6px;padding:10px 12px;margin-bottom:14px}
     .field .err{display:block;color:#b91c1c;font-size:14px;margin-top:6px}
+
+    /* 업로드 UI */
+    .dropzone{border:2px dashed #9ca3af;border-radius:8px;padding:18px;text-align:center;background:#fff}
+    .dropzone.hover{background:#f9fafb}
+    .upload-list{margin-top:10px;text-align:left;font-size:14px}
   </style>
 </head>
 <body>
@@ -44,6 +51,9 @@
         <!-- 수정일 때만 PUT 오버라이드 -->
         <input type="hidden" name="_method" th:if="${isEdit}" value="PUT"/>
 
+        <!-- 업로드 드래프트 식별자: 저장 시 서버에서 마이그레이션에 사용 -->
+        <input type="hidden" id="draftId" name="draftId"/>
+
         <!-- 글로벌 에러 -->
         <div class="errors" th:if="${#fields.hasErrors('*')}">
           <ul style="margin:0;padding-left:18px;">
@@ -63,6 +73,17 @@
           <span class="err" th:if="${#fields.hasErrors('content')}" th:errors="*{content}"></span>
         </div>
 
+        <!-- 파일 업로드 UI -->
+        <div class="field">
+          <label class="label">첨부 파일</label>
+          <div id="dropzone" class="dropzone">
+            파일을 이곳에 드래그
+            <button type="button" id="btnBrowse" class="btn">파일 선택</button>
+            <input type="file" id="fileInput" multiple style="display:none">
+            <div id="uploadList" class="upload-list"></div>
+          </div>
+        </div>
+
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
           <a th:href="${isEdit} ? @{|/posts/${post.id}|} : @{/posts}" class="btn">취소</a>
           <button type="submit" class="btn btn-primary">저장</button>
@@ -70,5 +91,63 @@
       </form>
     </div>
   </div>
+
+  <!-- 업로드 스크립트 -->
+  <script>
+  (function(){
+    // CSRF
+    const token  = document.querySelector('meta[name="_csrf"]')?.content;
+    const header = document.querySelector('meta[name="_csrf_header"]')?.content || 'X-CSRF-TOKEN';
+
+    // 드래프트 ID 생성
+    const draftEl = document.getElementById('draftId');
+    draftEl.value = (crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now()+''+Math.random());
+
+    const dz   = document.getElementById('dropzone');
+    const list = document.getElementById('uploadList');
+    const input= document.getElementById('fileInput');
+    const btn  = document.getElementById('btnBrowse');
+
+    btn.addEventListener('click', ()=> input.click());
+    input.addEventListener('change', ()=> { handleFiles(input.files); input.value=''; });
+
+    ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e=>{
+      e.preventDefault(); e.stopPropagation(); dz.classList.add('hover');
+    }));
+    ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e=>{
+      e.preventDefault(); e.stopPropagation(); dz.classList.remove('hover');
+    }));
+    dz.addEventListener('drop', e=> handleFiles(e.dataTransfer.files));
+
+    function handleFiles(files){
+      [...files].forEach(f => uploadFile(f));
+    }
+
+    async function uploadFile(file){
+      const row = document.createElement('div');
+      row.textContent = `업로드 중: ${file.name} (${file.size} B)`;
+      list.appendChild(row);
+
+      const fd = new FormData();
+      fd.append('draftId', draftEl.value);
+      fd.append('file', file);
+
+      try{
+        const res = await fetch('/api/uploads/draft', {
+          method: 'POST',
+          headers: token ? { [header]: token } : {},
+          body: fd
+        });
+        if(!res.ok) throw new Error('upload failed');
+        const data = await res.json();
+        const name = data.originalName || file.name;
+        const size = data.size || file.size;
+        row.innerHTML = `완료: <a href="${data.url}" target="_blank" rel="noopener">${name}</a> · ${size} B`;
+      }catch(e){
+        row.textContent = `실패: ${file.name}`;
+      }
+    }
+  })();
+  </script>
 </body>
 </html>
