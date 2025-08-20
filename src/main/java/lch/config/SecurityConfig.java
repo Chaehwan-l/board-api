@@ -44,13 +44,10 @@ public class SecurityConfig {
         return cfg.getAuthenticationManager();
     }
 
-
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-      http
-        .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
-        .authorizeHttpRequests(auth -> auth
-          // 공개
+      http .authorizeHttpRequests(auth -> auth
+          // 공개 화면
           .requestMatchers("/", "/login", "/register/**",
                            "/oauth2/**", "/login/oauth2/**",
                            "/css/**", "/js/**", "/images/**").permitAll()
@@ -60,14 +57,6 @@ public class SecurityConfig {
 
           // 화면: 목록/상세는 공개
           .requestMatchers(HttpMethod.GET, "/posts", "/posts/*").permitAll()
-
-          // API: 새 커맨드 엔드포인트만 쓰기 허용
-          .requestMatchers("/api/secure/**").authenticated()
-
-          // 구(PostController)의 쓰기 API가 남아있다면 차단
-          .requestMatchers(HttpMethod.POST,   "/api/posts/**").denyAll()
-          .requestMatchers(HttpMethod.PUT,    "/api/posts/**").denyAll()
-          .requestMatchers(HttpMethod.DELETE, "/api/posts/**").denyAll()
 
           // 화면에서의 변경 요청은 로그인 필요
           .requestMatchers(HttpMethod.POST,   "/posts/**").authenticated()
@@ -81,21 +70,23 @@ public class SecurityConfig {
         .authenticationProvider(daoAuthenticationProvider())
 
         .formLogin(f -> f.loginPage("/login")
-        		.defaultSuccessUrl("/", true)
-        		.failureUrl("/login?error")
-        		.permitAll())
+            .defaultSuccessUrl("/", true)
+            .failureUrl("/login?error")
+            .permitAll())
 
         .oauth2Login(o -> o.loginPage("/login")
-        		.userInfoEndpoint(u -> u.userService(oauth2UserService))
-        		.successHandler(oauth2SuccessHandler))
+            .userInfoEndpoint(u -> u.userService(oauth2UserService))
+            .successHandler(oauth2SuccessHandler))
 
         .logout(l -> l.logoutUrl("/logout")
-        		.logoutSuccessUrl("/")
-        		.invalidateHttpSession(true)
-        		.deleteCookies("JSESSIONID"))
+            .logoutSuccessUrl("/?logout")
+            .invalidateHttpSession(true)
+            .deleteCookies("JSESSIONID"))
 
-        .exceptionHandling(e -> e.authenticationEntryPoint((req, res, ex) -> res.sendRedirect("/register?required")));
+        .exceptionHandling(e -> e.authenticationEntryPoint(
+            (req, res, ex) -> res.sendRedirect("/register?required")
+        ));
+
       return http.build();
     }
-
 }
