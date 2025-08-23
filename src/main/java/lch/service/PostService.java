@@ -1,7 +1,7 @@
 package lch.service;
 
-import java.util.List;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,7 +18,20 @@ public class PostService {
 
     public PostService(PostRepository repo) { this.repo = repo; }
 
-    public List<Post> findAll() { return repo.findAll(); }
+    public Page<Post> findAll(Pageable pageable) {
+        return repo.findAll(pageable);
+    }
+
+    public Page<Post> search(String type, String q, Pageable pageable) {
+        if (q == null || q.isBlank()) {
+			return repo.findAll(pageable);
+		}
+        if ("author".equalsIgnoreCase(type)) {
+            return repo.findByUser_UsernameContainingIgnoreCase(q, pageable);
+        }
+        // 디폴트 제목 검색
+        return repo.findByTitleContainingIgnoreCase(q, pageable);
+    }
 
     public Post findById(Long id) {
         return repo.findById(id)
