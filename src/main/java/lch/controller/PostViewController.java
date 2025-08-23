@@ -111,6 +111,7 @@ public class PostViewController {
             return "redirect:/posts/{id}";
         }
         model.addAttribute("post", post);
+        model.addAttribute("attachments", attachmentRepository.findByPostIdOrderByIdAsc(id));
         return "posts/form";
     }
 

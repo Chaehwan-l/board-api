@@ -8,11 +8,13 @@ import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 import org.springframework.web.multipart.MultipartFile;
 
 import lombok.RequiredArgsConstructor;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -64,4 +66,15 @@ public class FileUploadService {
         base = base.substring(base.lastIndexOf('/') + 1);
         return URLEncoder.encode(base, StandardCharsets.UTF_8);
     }
+
+    public void deleteDraft(String draftId, String key) {
+        Assert.hasText(draftId, "draftId required");
+        Assert.hasText(key, "key required");
+        String prefix = "drafts/" + draftId + "/";
+        if (!key.startsWith(prefix)) {
+            throw new IllegalArgumentException("invalid key for draftId");
+        }
+        s3.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build());
+    }
+
 }

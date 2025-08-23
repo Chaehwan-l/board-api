@@ -38,12 +38,15 @@
       <div>
         <a th:href="@{/}" class="btn">메인</a>
         <a th:href="@{/posts}" class="btn">목록</a>
-        <a th:if="${isEdit}" th:href="@{|/posts/${post.id}|}" class="btn">상세</a>
+        <!-- 툴바 저장 버튼: form 속성으로 아래 폼 submit -->
+        <!-- 
+        <button type="submit" class="btn btn-primary" form="postForm">저장</button>
+         -->
       </div>
     </div>
 
     <div class="card">
-      <form th:object="${post}"
+      <form id="postForm" th:object="${post}"
             th:action="${isEdit} ? @{/posts/{id}(id=${post.id})} : @{/posts}"
             method="post">
         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
@@ -84,6 +87,32 @@
           </div>
         </div>
 
+        <!-- 기존 첨부파일 표시 및 삭제 -->
+        <div class="field"
+             th:if="${isEdit and attachments != null and !#lists.isEmpty(attachments)}">
+          <label class="label">기존 첨부</label>
+          <ul id="existingList" style="margin:6px 0 0 0;padding-left:18px;">
+            <li th:each="a : ${attachments}" th:attr="data-id=${a.id}" style="margin-bottom:8px">
+              <a th:href="@{|/attachments/${a.id}/download|}" th:text="${a.originalName}">filename</a>
+              <small th:text="${#numbers.formatInteger(a.size/1024,0)} + ' KB'"></small>
+              <button type="button" class="btn remove-attachment" th:attr="data-id=${a.id}">삭제</button>
+
+              <!-- 이미지 썸네일 -->
+              <div th:if="${a.originalName != null and (
+                             #strings.endsWith(#strings.toLowerCase(a.originalName), '.png') or
+                             #strings.endsWith(#strings.toLowerCase(a.originalName), '.jpg') or
+                             #strings.endsWith(#strings.toLowerCase(a.originalName), '.jpeg') or
+                             #strings.endsWith(#strings.toLowerCase(a.originalName), '.gif') or
+                             #strings.endsWith(#strings.toLowerCase(a.originalName), '.webp')
+                           )}" style="margin-top:6px">
+                <img th:src="@{|/attachments/${a.id}/download|}" alt=""
+                     style="max-width:160px;height:auto;border:1px solid #e5e7eb;border-radius:4px">
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- 하단 저장/취소 영역 + 폼 닫기 -->
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
           <a th:href="${isEdit} ? @{|/posts/${post.id}|} : @{/posts}" class="btn">취소</a>
           <button type="submit" class="btn btn-primary">저장</button>
@@ -142,11 +171,56 @@
         const data = await res.json();
         const name = data.originalName || file.name;
         const size = data.size || file.size;
-        row.innerHTML = `완료: <a href="${data.url}" target="_blank" rel="noopener">${name}</a> · ${size} B`;
+
+        row.className = 'upload-row';
+        if (data.key) row.dataset.key = data.key;
+
+        row.innerHTML =
+          `완료: <a href="${data.url}" target="_blank" rel="noopener">${name}</a> · ${size} B`
+          + (data.key ? ` <button type="button" class="btn remove-draft" data-key="${data.key}">삭제</button>` : '');
       }catch(e){
         row.textContent = `실패: ${file.name}`;
       }
     }
+
+    // 기존 첨부 삭제
+    document.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.remove-attachment');
+      if (!btn) return;
+      const id = btn.dataset.id || btn.getAttribute('data-id') || btn.closest('li')?.dataset.id;
+      if (!id) return;
+      if (!confirm('이 첨부파일을 삭제하시겠습니까?')) return;
+
+      const res = await fetch(`/attachments/${id}`, {
+        method: 'DELETE',
+        headers: token ? { [header]: token } : {}
+      });
+      if (res.ok) {
+        btn.closest('li')?.remove();
+      } else {
+        alert('삭제에 실패했습니다.');
+      }
+    });
+
+    // 드래프트 파일 삭제
+    document.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.remove-draft');
+      if (!btn) return;
+      const key = btn.dataset.key || btn.closest('.upload-row')?.dataset.key;
+      if (!key) return;
+      if (!confirm('이 파일을 제거하시겠습니까?')) return;
+
+      const params = new URLSearchParams({ draftId: draftEl.value, key });
+      const res = await fetch(`/api/uploads/draft?${params}`, {
+        method: 'DELETE',
+        headers: token ? { [header]: token } : {}
+      });
+      if (res.ok) {
+        btn.closest('.upload-row')?.remove();
+      } else {
+        alert('삭제에 실패했습니다.');
+      }
+    });
   })();
   </script>
 </body>

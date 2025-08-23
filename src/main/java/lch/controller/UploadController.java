@@ -3,6 +3,8 @@ package lch.controller;
 import java.io.IOException;
 
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -27,5 +29,13 @@ public class UploadController {
             @RequestParam("draftId") String draftId,
             @RequestParam("file") MultipartFile file) throws IOException {
         return fileUploadService.uploadDraft(draftId, file);
+    }
+
+    @DeleteMapping(path = "/draft")
+    public ResponseEntity<Void> deleteDraft(
+            @RequestParam("draftId") String draftId,
+            @RequestParam("key") String key) {
+        fileUploadService.deleteDraft(draftId, key);
+        return ResponseEntity.noContent().build();
     }
 }
