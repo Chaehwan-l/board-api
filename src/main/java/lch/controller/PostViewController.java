@@ -23,7 +23,8 @@ import lch.entity.Post;
 import lch.entity.UserAccount;
 import lch.repository.AttachmentRepository;
 import lch.repository.UserAccountRepository;
-import lch.service.AttachmentService; // 추가
+import lch.service.AttachmentService;
+import lch.service.CommentService;
 import lch.service.PostService;
 import lombok.RequiredArgsConstructor;
 
@@ -33,9 +34,11 @@ import lombok.RequiredArgsConstructor;
 public class PostViewController {
 
 	private final PostService postService;
-	private final UserAccountRepository userRepo;
+	private final CommentService commentService;
 	private final AttachmentService attachmentService;
+	private final UserAccountRepository userRepo;
 	private final AttachmentRepository attachmentRepository;
+
 
 	private boolean ownsOrAdmin(UserAccount me, Post p) {
 		if (me == null || p == null) {
@@ -86,6 +89,7 @@ public class PostViewController {
 		model.addAttribute("post", post);
 		model.addAttribute("canEdit", canEdit);
 		model.addAttribute("attachments", attachmentRepository.findByPostIdOrderByIdAsc(id));
+		model.addAttribute("comments", commentService.list(id));
 		return "posts/detail";
 	}
 

@@ -64,13 +64,19 @@ public class SecurityConfig {
           .requestMatchers(HttpMethod.PATCH,  "/posts/**").authenticated()
           .requestMatchers(HttpMethod.DELETE, "/posts/**").authenticated()
 
+          // 댓글 기능
+          .requestMatchers(org.springframework.http.HttpMethod.POST,   "/posts/*/comments").authenticated()
+          .requestMatchers(org.springframework.http.HttpMethod.POST,   "/comments/*").authenticated()
+          .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/comments/*").authenticated()
+
           // 나머지
           .anyRequest().permitAll()
         )
+
         .authenticationProvider(daoAuthenticationProvider())
 
         .formLogin(f -> f.loginPage("/login")
-            .defaultSuccessUrl("/", true)
+            .defaultSuccessUrl("/", false)
             .failureUrl("/login?error")
             .permitAll())
 
